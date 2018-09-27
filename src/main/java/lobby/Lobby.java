@@ -111,7 +111,7 @@ public class Lobby {
 
     /**
      * Broadcast a message to all connected websockets
-     * @param message
+     * @param message to be broadcast
      */
     public void broadcast(String message) {
         for (WebSocket user: users) {
@@ -129,7 +129,7 @@ public class Lobby {
      */
     private LobbyState getLobbyState() {
         LobbyState ls = new LobbyState();
-        ls.actionDeadline = new Date(this.lastAction.getTime() + 5*60*1000);
+        ls.actionDeadline = new Date(this.lastAction.getTime() + 30*60*1000);
         ls.game = this.game;
         ls.mode = this.mode;
         ls.state = this.state;

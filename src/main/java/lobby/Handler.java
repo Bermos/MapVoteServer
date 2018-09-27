@@ -3,7 +3,7 @@ package lobby;
 import java.util.*;
 
 public class Handler {
-    private Map<String, Lobby> lobbies = new HashMap<String, Lobby>();
+    private Map<String, Lobby> lobbies = new HashMap<>();
     private List<String> adjectives = readList("adjectives");
     private List<String> nouns = readList("nouns");
 
