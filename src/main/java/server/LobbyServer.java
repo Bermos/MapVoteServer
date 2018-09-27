@@ -1,5 +1,7 @@
 package server;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import lobby.Handler;
 import lobby.Lobby;
 import lobby.User;
@@ -15,6 +17,7 @@ import java.util.TreeMap;
 public class LobbyServer extends WebSocketServer {
 
     private Handler lobbyHandler;
+    private JsonParser jsp = new JsonParser();
 
     public LobbyServer(int port, Handler lobbyHandler) {
         super(new InetSocketAddress(port));
@@ -74,7 +77,17 @@ public class LobbyServer extends WebSocketServer {
     }
 
     public void onMessage(WebSocket webSocket, String s) {
+        JsonElement msg = jsp.parse(s);
 
+        if (!msg.isJsonObject()) {
+            WsPackage.create(Action.ERROR)
+                    .addData("error", "JSON parse error")
+                    .addData("message", "Message could not be parsed as JSON. Please check the syntax.")
+                    .send(webSocket);
+            return;
+        }
+
+        //TODO implement
     }
 
     public void onError(WebSocket webSocket, Exception e) {
@@ -89,7 +102,7 @@ public class LobbyServer extends WebSocketServer {
         values = (values.charAt(0) == '/') ?
                 values.replaceFirst("/\\?", "") : values.replaceFirst("\\?", "");
 
-        Map<String,String> valueMap = new TreeMap<String,String>();
+        Map<String,String> valueMap = new TreeMap<>();
 
         String[] map = values.split("&");
         for (String aMap : map) {
