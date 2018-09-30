@@ -1,15 +1,14 @@
 package server;
 
-import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import lobby.Handler;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Map;
 
 public class WebhookServer implements HttpHandler {
-    private JsonParser jsp = new JsonParser();
     private Handler lobbyHandler;
 
     public WebhookServer(Handler lobbyHandler) {
@@ -22,16 +21,26 @@ public class WebhookServer implements HttpHandler {
                 .replaceFirst(httpExchange.getHttpContext().getPath(), "");
         OutputStream os = httpExchange.getResponseBody();
 
+        System.out.println(localContext);
+        System.out.println(httpExchange.getRequestURI().getQuery());
+
         switch (localContext) {
             case "/create":
-                String lobbyId = lobbyHandler.createNewLobby();
-                httpExchange.sendResponseHeaders(200, 0);
+                Map<String, String> params = ServerHelper.getUrlParams(httpExchange.getRequestURI().getQuery());
+                if(!params.containsKey("game") || !params.containsKey("mode")) {
+                    httpExchange.sendResponseHeaders(400, 0);
+                    break;
+                }
+
+                String lobbyId = lobbyHandler.createNewLobby(params.get("game"), params.get("mode"));
+                httpExchange.sendResponseHeaders(200, lobbyId.length());
                 os.write(lobbyId.getBytes());
                 break;
 
             default:
-                httpExchange.sendResponseHeaders(404,0);
-                os.write("There is nothing here".getBytes());
+                String response = "There is nothing here";
+                httpExchange.sendResponseHeaders(404,response.length());
+                os.write(response.getBytes());
                 break;
 
         }

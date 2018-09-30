@@ -13,7 +13,6 @@ public class Main {
     public static void main(String[] args) throws IOException {
 
         Handler hd = new Handler();
-        System.out.println(hd.createNewLobby());
 
         // Setup websocket server
         LobbyServer ls = new LobbyServer(7666, hd);

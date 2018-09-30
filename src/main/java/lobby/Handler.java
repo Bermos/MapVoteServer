@@ -12,11 +12,11 @@ public class Handler {
      *
      * @return the id of the new lobby
      */
-    public String createNewLobby() {
+    public String createNewLobby(String game, String mode) {
         String id;
         while(lobbies.containsKey(id = generateId()));
 
-        lobbies.put(id, new Lobby(id));
+        lobbies.put(id, new Lobby(id, game, mode));
 
         return id;
     }
@@ -28,11 +28,11 @@ public class Handler {
      * @param id for the new lobby
      * @return true if a new lobby was created
      */
-    public boolean createNewLobby(String id) {
+    public boolean createNewLobby(String id, String game, String mode) {
         if (lobbies.containsKey(id))
             return false;
 
-        Lobby lobby = new Lobby(id);
+        Lobby lobby = new Lobby(id, game, mode);
         lobbies.put(id, lobby);
         return true;
     }

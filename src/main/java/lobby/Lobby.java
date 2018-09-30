@@ -1,9 +1,14 @@
 package lobby;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import org.java_websocket.WebSocket;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import server.WsPackage;
+import server.WsPackage.Action;
+import vote.CounterStrike;
+import vote.Game;
+import vote.OverWatch;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -14,32 +19,39 @@ public class Lobby {
        BO1, BO3, BO5
     }
 
-    private enum Game {
-        CS, OW
-    }
-
     public class LobbyState {
         String[] users;
         int state;
+        Team a, b;
+        Team turn;
         Mode mode;
         Game game;
         Date actionDeadline;
     }
 
     private String id;
-    private List<WebSocket> users = new ArrayList<>();
-    private WebSocket host;
     private int state;
+    private Team a, b;
+    private Team turn;
     private Mode mode;
     private Game game;
+    private WebSocket host;
     private Date lastAction;
 
     private Gson gson = new Gson();
+    private List<WebSocket> users = new ArrayList<>();
 
-    Lobby(String id) {
+
+    Lobby(String id, String game, String mode) {
         this.id = id;
         this.state = 0;
         this.lastAction = new Date();
+
+        setGame(
+                game.equalsIgnoreCase("ow") ? new OverWatch() :
+                game.equalsIgnoreCase("cs") ? new CounterStrike() : null
+        );
+        setMode(Mode.valueOf(mode.toUpperCase()));
     }
 
     /**
@@ -48,6 +60,16 @@ public class Lobby {
      */
     public void join(WebSocket user) {
         users.add(user);
+
+        if (users.size() == 1) {
+            setHost(user);
+            a = new Team();
+            a.leader = user;
+        } else if (users.size() == 2) {
+            b = new Team();
+            b.leader = user;
+            startVote();
+        }
     }
 
     /**
@@ -100,6 +122,25 @@ public class Lobby {
         return id;
     }
 
+    public void handle(JsonObject msg) {
+        Action action = Action.valueOf(msg.get("action").getAsString().toUpperCase());
+        JsonObject data = msg.get("data").isJsonObject() ? msg.getAsJsonObject("data") : null;
+
+        if(action == Action.SET) {
+            /* this.game = data.has("game") ? Game.valueOf(data.get("game").toString().toUpperCase()) : game;
+            this.mode = data.has("mode") ? Mode.valueOf(data.get("mode").toString().toUpperCase()) : mode; */
+
+        }
+
+        if(action == Action.VOTE) {
+
+        }
+
+        if(data.get("").toString().equalsIgnoreCase("")) {
+
+        }
+    }
+
     /**
      * Broadcasts the current state of the lobby to all connected websockets
      */
@@ -130,13 +171,30 @@ public class Lobby {
     private LobbyState getLobbyState() {
         LobbyState ls = new LobbyState();
         ls.actionDeadline = new Date(this.lastAction.getTime() + 30*60*1000);
+        ls.a = this.a;
+        ls.b = this.b;
         ls.game = this.game;
         ls.mode = this.mode;
+        ls.turn = this.turn;
         ls.state = this.state;
         ls.users = this.users.stream()
                 .map(ws -> ((User)(ws.getAttachment())).getUsername())
                 .sorted().toArray(String[]::new);
 
         return ls;
+    }
+
+    /**
+     * Changes the next turn to the other team
+     */
+    private void nextTurn() {
+        if(turn == a)
+            turn = b;
+        else
+            turn = a;
+    }
+
+    private void startVote() {
+        turn = a;
     }
 }

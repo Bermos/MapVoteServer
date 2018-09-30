@@ -5,14 +5,13 @@ import com.google.gson.JsonParser;
 import lobby.Handler;
 import lobby.Lobby;
 import lobby.User;
-import server.WsPackage.Action;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
+import server.WsPackage.Action;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
-import java.util.TreeMap;
 
 public class LobbyServer extends WebSocketServer {
 
@@ -25,7 +24,7 @@ public class LobbyServer extends WebSocketServer {
     }
 
     public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
-        Map<String, String> args = getArgs(clientHandshake.getResourceDescriptor());
+        Map<String, String> args = ServerHelper.getUrlParams(clientHandshake.getResourceDescriptor());
         String lobbyid = args.get("lobbyid");
         String username = args.get("username");
 
@@ -87,7 +86,8 @@ public class LobbyServer extends WebSocketServer {
             return;
         }
 
-        //TODO implement
+        User user = webSocket.getAttachment();
+        user.getLobby().handle(msg.getAsJsonObject());
     }
 
     public void onError(WebSocket webSocket, Exception e) {
@@ -95,21 +95,6 @@ public class LobbyServer extends WebSocketServer {
     }
 
     public void onStart() {
-        System.out.println("Websocket Server started.");
-    }
-
-    private Map<String, String> getArgs(String values) {
-        values = (values.charAt(0) == '/') ?
-                values.replaceFirst("/\\?", "") : values.replaceFirst("\\?", "");
-
-        Map<String,String> valueMap = new TreeMap<>();
-
-        String[] map = values.split("&");
-        for (String aMap : map) {
-            String[] pair = aMap.split("=");
-            valueMap.put(pair[0], pair[1]);
-        }
-
-        return valueMap;
+        System.out.println("Websocket ServerHelper started.");
     }
 }
