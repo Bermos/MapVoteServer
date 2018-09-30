@@ -87,7 +87,7 @@ public class LobbyServer extends WebSocketServer {
         }
 
         User user = webSocket.getAttachment();
-        user.getLobby().handle(msg.getAsJsonObject());
+        user.getLobby().handle(msg.getAsJsonObject(), webSocket);
     }
 
     public void onError(WebSocket webSocket, Exception e) {

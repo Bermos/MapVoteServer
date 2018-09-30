@@ -122,21 +122,29 @@ public class Lobby {
         return id;
     }
 
-    public void handle(JsonObject msg) {
+    public void handle(JsonObject msg, WebSocket user) {
         Action action = Action.valueOf(msg.get("action").getAsString().toUpperCase());
         JsonObject data = msg.get("data").isJsonObject() ? msg.getAsJsonObject("data") : null;
 
-        if(action == Action.SET) {
-            /* this.game = data.has("game") ? Game.valueOf(data.get("game").toString().toUpperCase()) : game;
-            this.mode = data.has("mode") ? Mode.valueOf(data.get("mode").toString().toUpperCase()) : mode; */
+        switch (action) {
+            case SET:
+                /* this.game = data.has("game") ? Game.valueOf(data.get("game").toString().toUpperCase()) : game;
+                this.mode = data.has("mode") ? Mode.valueOf(data.get("mode").toString().toUpperCase()) : mode; */
+                if (data.has("teamName")) {
+                    if (a.leader == user)
+                        a.name = data.get("teamName").getAsString();
+                    else if (b.leader == user)
+                        b.name = data.get("teamName").getAsString();
+                    else
+                        WsPackage.create(Action.ERROR)
+                                .addData("error", "Unauthorized")
+                                .addData("message", "Only team leaders can set a team name")
+                                .send(user);
+                }
+                break;
 
-        }
-
-        if(action == Action.VOTE) {
-
-        }
-
-        if(data.get("").toString().equalsIgnoreCase("")) {
+            case VOTE:
+                break;
 
         }
     }
@@ -196,5 +204,7 @@ public class Lobby {
 
     private void startVote() {
         turn = a;
+        state = 1;
+        updatePeers();
     }
 }
