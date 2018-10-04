@@ -22,8 +22,8 @@ public class Lobby {
     public class LobbyState {
         String[] users;
         int state;
-        Team a, b;
-        Team turn;
+        Team.WebSafeTeam a, b;
+        Team.WebSafeTeam turn;
         Mode mode;
         Game game;
         Date actionDeadline;
@@ -64,11 +64,10 @@ public class Lobby {
         if (users.size() == 1) {
             setHost(user);
             a = new Team();
-            a.leader = user;
+            a.setLeader(user);
         } else if (users.size() == 2) {
             b = new Team();
-            b.leader = user;
-            startVote();
+            b.setLeader(user);
         }
     }
 
@@ -125,25 +124,62 @@ public class Lobby {
     public void handle(JsonObject msg, WebSocket user) {
         Action action = Action.valueOf(msg.get("action").getAsString().toUpperCase());
         JsonObject data = msg.get("data").isJsonObject() ? msg.getAsJsonObject("data") : null;
+        boolean lobbyStateChanged = false;
 
         switch (action) {
             case SET:
-                /* this.game = data.has("game") ? Game.valueOf(data.get("game").toString().toUpperCase()) : game;
-                this.mode = data.has("mode") ? Mode.valueOf(data.get("mode").toString().toUpperCase()) : mode; */
                 if (data.has("teamName")) {
-                    if (a.leader == user)
+                    if (a.getLeader() == user) {
                         a.name = data.get("teamName").getAsString();
-                    else if (b.leader == user)
+                        lobbyStateChanged = true;
+                    } else if (b.getLeader() == user) {
                         b.name = data.get("teamName").getAsString();
-                    else
+                        lobbyStateChanged = true;
+                    } else {
                         WsPackage.create(Action.ERROR)
                                 .addData("error", "Unauthorized")
-                                .addData("message", "Only team leaders can set a team name")
+                                .addData("message", "Only team leaders can set a team name.")
                                 .send(user);
+                    }
                 }
+
+                if (data.has("teamReady")) {
+                    if (a.getLeader() == user) {
+                        a.ready = data.get("teamReady").getAsBoolean();
+                        lobbyStateChanged = true;
+                    }
+                    else if (b.getLeader() == user) {
+                        b.ready = data.get("teamReady").getAsBoolean();
+                        lobbyStateChanged = true;
+                    }
+                    else {
+                        WsPackage.create(Action.ERROR)
+                                .addData("error", "Unauthorized")
+                                .addData("message", "Only team leaders can set the team ready status.")
+                                .send(user);
+                    }
+
+                    if (a.ready && b.ready)
+                        startVote();
+                }
+
+                if (lobbyStateChanged)
+                    updatePeers();
                 break;
 
             case VOTE:
+                if(turn.getLeader() == user) {
+                    if (!voteMap(msg.get("map").getAsJsonObject(), msg.get("vote").getAsInt())) {
+                        WsPackage.create(Action.ERROR)
+                                .addData("error", "Bad Request")
+                                .addData("message", "This map has already been voted on.")
+                                .send(user);
+                        break;
+                    }
+
+                    nextTurn();
+                    updatePeers();
+                }
                 break;
 
         }
@@ -154,7 +190,7 @@ public class Lobby {
      */
     public void updatePeers() {
         WsPackage.create(WsPackage.Action.UPDATE)
-                .addDataElement("lobbyState", gson.toJsonTree(getLobbyState()))
+                .addDataElement("lobbyState", gson.toJsonTree(getLobbyState())) //getLobbyState()))
                 .broadcast(this);
     }
 
@@ -176,14 +212,15 @@ public class Lobby {
      * Get a LobbyState object that represents the current state of the lobby
      * @return the current state of the lobby
      */
-    private LobbyState getLobbyState() {
+    public LobbyState getLobbyState() {
         LobbyState ls = new LobbyState();
+
         ls.actionDeadline = new Date(this.lastAction.getTime() + 30*60*1000);
-        ls.a = this.a;
-        ls.b = this.b;
+        ls.a = this.a == null ? null : this.a.getWebSafeTeam();
+        ls.b = this.b == null ? null : this.b.getWebSafeTeam();
         ls.game = this.game;
         ls.mode = this.mode;
-        ls.turn = this.turn;
+        ls.turn = this.turn == null ? null : this.turn.getWebSafeTeam();
         ls.state = this.state;
         ls.users = this.users.stream()
                 .map(ws -> ((User)(ws.getAttachment())).getUsername())
@@ -206,5 +243,16 @@ public class Lobby {
         turn = a;
         state = 1;
         updatePeers();
+    }
+
+    private boolean voteMap(JsonObject map, int vote) {
+        Game.GameMap gameMap = game.mapCategories.get(map.get("category").getAsString()).get(map.get("name").getAsString());
+
+        if (gameMap.voteState == 0)
+            return false;
+
+        gameMap.voteState = vote;
+        gameMap.votedBy = turn;
+        return true;
     }
 }
