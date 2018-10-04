@@ -21,8 +21,7 @@ public class WebhookServer implements HttpHandler {
                 .replaceFirst(httpExchange.getHttpContext().getPath(), "");
         OutputStream os = httpExchange.getResponseBody();
 
-        System.out.println(localContext);
-        System.out.println(httpExchange.getRequestURI().getQuery());
+        System.out.println("[Create] new lobby");
 
         switch (localContext) {
             case "/create":
