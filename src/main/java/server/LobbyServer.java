@@ -69,6 +69,11 @@ public class LobbyServer extends WebSocketServer {
     public void onClose(WebSocket webSocket, int i, String s, boolean b) {
         User user = webSocket.getAttachment();
 
+        if(user == null) {
+            System.out.println("[Disconnect] anonymous user");
+            return;
+        }
+
         System.out.println("[Disconnect] Username: " + user.getUsername() + " - lobbyid: " + user.getLobby().getID());
 
         user.getLobby().leave(webSocket);
